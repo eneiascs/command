@@ -15,10 +15,14 @@ package io.airlift.command;
 
 import static java.lang.String.format;
 
-public class CommandFailedException
-        extends Exception
+public class CommandFailedException extends Exception
 {
-    private final Integer exitCode;
+    /**
+	 * Serial code version <code>serialVersionUID</code> for serialization 
+	 */
+	private static final long serialVersionUID = -2158304108235948790L;
+	
+	private final Integer exitCode;
     private final String output;
     private final Command command;
 

@@ -49,8 +49,7 @@ public class TestCommand
     }
 
     @Test
-    public void buildCommandChainNewObjects()
-            throws Exception
+    public void buildCommandChainNewObjects() throws Exception
     {
         Command command = new Command("foo");
         assertNotSame(command.setDirectory("foo"), command);
@@ -123,7 +122,6 @@ public class TestCommand
         assertEquals(result.getCommandOutput(), "hello\n");
     }
 
-    @SuppressWarnings("ExpectedExceptionNeverThrownTestNG")
     @Test(expectedExceptions = CommandTimeoutException.class)
     public void execTimeout()
             throws Exception

@@ -13,10 +13,14 @@
  */
 package io.airlift.command;
 
-public class CommandTimeoutException
-        extends CommandFailedException
+public class CommandTimeoutException extends CommandFailedException
 {
-    public CommandTimeoutException(Command command)
+    /**
+	 * Serial code version <code>serialVersionUID</code> for serialization.
+	 */
+	private static final long serialVersionUID = -2686901742632947931L;
+
+	public CommandTimeoutException(Command command)
     {
         super(command, "did not complete in " + command.getTimeLimit(), null);
     }

@@ -13,20 +13,48 @@
  */
 package io.airlift.command;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
+
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
+import java.util.Objects;
+
+import javax.annotation.concurrent.Immutable;
+
+@Immutable
 public class CommandResult
 {
+	private final String id;
+	private final long pid;
     private final int exitCode;
     private final String commandOutput;
+	private final ImmutableList<ProcessState> stats;
 
-    public CommandResult(int exitCode, String commandOutput)
+    public CommandResult(String id, long pid, int exitCode, String commandOutput)
     {
-        this.exitCode = exitCode;
-        this.commandOutput = requireNonNull(commandOutput, "commandOutput is null");
+        this(id, pid, exitCode, commandOutput, ImmutableList.of());
     }
+    
+    public CommandResult(String id, long pid, int exitCode, String commandOutput, List<ProcessState> monitorData)
+    {
+    	this.id = id;
+    	this.pid = pid;
+    	this.exitCode = exitCode;
+        this.commandOutput = requireNonNull(commandOutput, "commandOutput is null");
+        this.stats = monitorData == null ? ImmutableList.of() : ImmutableList.copyOf(monitorData);
+    }
+    
+    /**
+	 * @return the id
+	 */
+	public String getId() 
+	{
+		return id;
+	}
 
-    public int getExitCode()
+	public int getExitCode()
     {
         return exitCode;
     }
@@ -35,4 +63,55 @@ public class CommandResult
     {
         return commandOutput;
     }
+    
+    public ImmutableList<ProcessState> getProcessStats()
+    {
+    	return stats;
+    }
+
+	/**
+	 * @return the pid
+	 */
+	public long getPid() 
+	{
+		return pid;
+	}
+	
+	@Override
+	public boolean equals(Object obj) 
+	{
+		if (this == obj)
+		{
+			return true;
+		}
+		
+		if (obj == null || getClass() != obj.getClass())
+		{
+			return false;
+		}
+		
+		CommandResult other = (CommandResult)obj;
+		
+		return Objects.equals(getId(), other.getId()) &&
+			   Objects.equals(getPid(), other.getPid()) &&
+			   Objects.equals(getExitCode(), other.getExitCode()) &&
+			   Objects.equals(getCommandOutput(), other.getCommandOutput());
+	}
+	
+	@Override
+	public int hashCode() 
+	{
+		return Objects.hash(getId(), getPid(), getExitCode(), getCommandOutput());
+	}
+	
+	@Override
+	public String toString() 
+	{
+		return MoreObjects.toStringHelper(this)
+				.add("pid", getPid())
+				.add("exitcode", getExitCode())
+				.add("output", getCommandOutput())
+				.omitNullValues()
+				.toString();
+	}
 }

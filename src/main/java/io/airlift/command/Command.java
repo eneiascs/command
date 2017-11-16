@@ -13,6 +13,7 @@
  */
 package io.airlift.command;
 
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -20,11 +21,13 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListenableFutureTask;
+
 import io.airlift.units.Duration;
 
 import javax.annotation.concurrent.Immutable;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -47,18 +50,20 @@ public class Command
     private static final File DEFAULT_DIRECTORY = new File(".").getAbsoluteFile();
     private static final Duration DEFAULT_TIME_LIMIT = new Duration(365, TimeUnit.DAYS);
 
+    private final String id;
     private final List<String> command;
     private final Set<Integer> successfulExitCodes;
     private final File directory;
     private final Map<String, String> environment;
     private final Duration timeLimit;
+    private final List<Object> listeners;
 
-    public Command(String... command)
+    public Command(String id, String... command)
     {
-        this(ImmutableList.copyOf(command), DEFAULT_SUCCESSFUL_EXIT_CODES, DEFAULT_DIRECTORY, ImmutableMap.<String, String>of(), DEFAULT_TIME_LIMIT);
+        this(id, ImmutableList.copyOf(command), DEFAULT_SUCCESSFUL_EXIT_CODES, DEFAULT_DIRECTORY, ImmutableMap.<String, String>of(), DEFAULT_TIME_LIMIT, Collections.emptyList());
     }
 
-    public Command(List<String> command, Set<Integer> successfulExitCodes, File directory, Map<String, String> environment, Duration timeLimit)
+    public Command(String id, List<String> command, Set<Integer> successfulExitCodes, File directory, Map<String, String> environment, Duration timeLimit, List<Object> listeners)
     {
         requireNonNull(command, "command is null");
         checkArgument(!command.isEmpty(), "command is empty");
@@ -66,16 +71,29 @@ public class Command
         checkArgument(!successfulExitCodes.isEmpty(), "successfulExitCodes is empty");
         requireNonNull(directory, "directory is null");
         requireNonNull(timeLimit, "timeLimit is null");
+        
+        checkArgument(!Strings.isNullOrEmpty(id), "ID is null or empty");
 
+        this.id = id;
         this.command = ImmutableList.copyOf(command);
         // exit codes have a default and thus are required
         this.successfulExitCodes = ImmutableSet.copyOf(successfulExitCodes);
         this.directory = directory;
         this.environment = ImmutableMap.copyOf(environment);
         this.timeLimit = timeLimit;
+        
+        this.listeners = listeners != null ? ImmutableList.copyOf(listeners) : ImmutableList.of().asList();
     }
+    
+    /**
+	 * @return the id
+	 */
+	public String getId() 
+	{
+		return id;
+	}
 
-    public List<String> getCommand()
+	public List<String> getCommand()
     {
         return command;
     }
@@ -90,7 +108,12 @@ public class Command
     {
         requireNonNull(args, "args is null");
         ImmutableList.Builder<String> command = ImmutableList.<String>builder().addAll(this.command).addAll(args);
-        return new Command(command.build(), successfulExitCodes, directory, environment, timeLimit);
+        return new Command(id, command.build(), successfulExitCodes, directory, environment, timeLimit, listeners);
+    }
+    
+    public Command registerListeners(List<Object> listeners)
+    {
+    	return new Command(id, command, successfulExitCodes, directory, environment, timeLimit, listeners);
     }
 
     public Map<String, String> getEnvironment()
@@ -103,14 +126,14 @@ public class Command
         requireNonNull(name, "name is null");
         requireNonNull(value, "value is null");
         ImmutableMap.Builder<String, String> builder = ImmutableMap.<String, String>builder().putAll(this.environment).put(name, value);
-        return new Command(command, successfulExitCodes, directory, builder.build(), timeLimit);
+        return new Command(id, command, successfulExitCodes, directory, builder.build(), timeLimit, listeners);
     }
 
     public Command addEnvironment(Map<String, String> environment)
     {
         requireNonNull(environment, "environment is null");
         ImmutableMap.Builder<String, String> builder = ImmutableMap.<String, String>builder().putAll(this.environment).putAll(environment);
-        return new Command(command, successfulExitCodes, directory, builder.build(), timeLimit);
+        return new Command(id, command, successfulExitCodes, directory, builder.build(), timeLimit, listeners);
     }
 
     public Set<Integer> getSuccessfulExitCodes()
@@ -128,7 +151,7 @@ public class Command
     {
         requireNonNull(successfulExitCodes, "successfulExitCodes is null");
         checkArgument(!successfulExitCodes.isEmpty(), "successfulExitCodes is empty");
-        return new Command(command, successfulExitCodes, directory, environment, timeLimit);
+        return new Command(id, command, successfulExitCodes, directory, environment, timeLimit, listeners);
     }
 
     public File getDirectory()
@@ -145,7 +168,7 @@ public class Command
     public Command setDirectory(File directory)
     {
         requireNonNull(directory, "directory is null");
-        return new Command(command, successfulExitCodes, directory, environment, timeLimit);
+        return new Command(id, command, successfulExitCodes, directory, environment, timeLimit, listeners);
     }
 
     public Duration getTimeLimit()
@@ -161,30 +184,34 @@ public class Command
     public Command setTimeLimit(Duration timeLimit)
     {
         requireNonNull(timeLimit, "timeLimit is null");
-        return new Command(command, successfulExitCodes, directory, environment, timeLimit);
+        return new Command(id, command, successfulExitCodes, directory, environment, timeLimit, listeners);
     }
 
-    public CommandResult execute(Executor executor)
-            throws CommandFailedException
+    public CommandResult execute(Executor executor) throws CommandFailedException
     {
-        ProcessCallable processCallable = new ProcessCallable(this, executor);
+        ProcessCallable processCallable = new ProcessCallable(this, executor, listeners);
         Future<CommandResult> future = submit(executor, processCallable);
 
-        try {
+        try 
+        {
             return future.get(timeLimit.toMillis(), TimeUnit.MILLISECONDS);
         }
-        catch (ExecutionException e) {
+        catch (ExecutionException e) 
+        {
             Throwables.propagateIfPossible(e.getCause(), CommandFailedException.class);
             throw new CommandFailedException(this, "unexpected exception", e.getCause());
         }
-        catch (InterruptedException e) {
+        catch (InterruptedException e) 
+        {
             Thread.currentThread().interrupt();
             throw new CommandFailedException(this, "interrupted", e);
         }
-        catch (TimeoutException e) {
+        catch (TimeoutException e) 
+        {
             throw new CommandTimeoutException(this);
         }
-        finally {
+        finally 
+        {
             future.cancel(true);
         }
     }
@@ -192,17 +219,21 @@ public class Command
     @Override
     public boolean equals(Object obj)
     {
-        if (this == obj) {
+        if (this == obj) 
+        {
             return true;
         }
-        if (obj == null || getClass() != obj.getClass()) {
+        
+        if (obj == null || getClass() != obj.getClass()) 
+        {
             return false;
         }
+        
         Command o = (Command) obj;
         return Objects.equals(this.command, o.command) &&
-                Objects.equals(this.successfulExitCodes, o.successfulExitCodes) &&
-                Objects.equals(this.directory, o.directory) &&
-                Objects.equals(this.timeLimit, o.timeLimit);
+               Objects.equals(this.successfulExitCodes, o.successfulExitCodes) &&
+               Objects.equals(this.directory, o.directory) &&
+               Objects.equals(this.timeLimit, o.timeLimit);
     }
 
     @Override

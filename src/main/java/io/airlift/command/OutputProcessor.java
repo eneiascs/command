@@ -26,7 +26,7 @@ import static io.airlift.command.Command.submit;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
-class OutputProcessor
+public class OutputProcessor
 {
     private final InputStream inputStream;
     private final Executor executor;
@@ -45,14 +45,18 @@ class OutputProcessor
 
     public String getOutput()
     {
-        if ((outputFuture != null) && !outputFuture.isCancelled()) {
-            try {
+        if ((outputFuture != null) && !outputFuture.isCancelled()) 
+        {
+            try 
+            {
                 return outputFuture.get();
             }
-            catch (InterruptedException e) {
+            catch (InterruptedException e) 
+            {
                 Thread.currentThread().interrupt();
             }
-            catch (ExecutionException ignored) {
+            catch (ExecutionException ignored) 
+            {
             }
         }
         return null;
@@ -61,13 +65,16 @@ class OutputProcessor
     public void destroy()
     {
         // close input stream which will normally interrupt the reader
-        try {
+        try 
+        {
             inputStream.close();
         }
+        
         catch (IOException ignored) {
         }
 
-        if (outputFuture != null) {
+        if (outputFuture != null) 
+        {
             outputFuture.cancel(true);
         }
     }
