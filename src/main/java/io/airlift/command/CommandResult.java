@@ -27,21 +27,23 @@ import javax.annotation.concurrent.Immutable;
 public class CommandResult
 {
 	private final String id;
-	private final long pid;
-    private final int exitCode;
+	private final Long pid;
+    private final Integer exitCode;
     private final String commandOutput;
 	private final ImmutableList<ProcessState> stats;
+	private final Long elapsedTime;
 
-    public CommandResult(String id, long pid, int exitCode, String commandOutput)
+    public CommandResult(String id, Long pid, Integer exitCode, String commandOutput, Long elapsedTime)
     {
-        this(id, pid, exitCode, commandOutput, ImmutableList.of());
+        this(id, pid, exitCode, commandOutput, elapsedTime, ImmutableList.of());
     }
     
-    public CommandResult(String id, long pid, int exitCode, String commandOutput, List<ProcessState> monitorData)
+    public CommandResult(String id, Long pid, Integer exitCode, String commandOutput, Long elapsedTime, List<ProcessState> monitorData)
     {
     	this.id = id;
     	this.pid = pid;
     	this.exitCode = exitCode;
+    	this.elapsedTime = elapsedTime;
         this.commandOutput = requireNonNull(commandOutput, "commandOutput is null");
         this.stats = monitorData == null ? ImmutableList.of() : ImmutableList.copyOf(monitorData);
     }
@@ -54,7 +56,7 @@ public class CommandResult
 		return id;
 	}
 
-	public int getExitCode()
+	public Integer getExitCode()
     {
         return exitCode;
     }
@@ -64,7 +66,16 @@ public class CommandResult
         return commandOutput;
     }
     
-    public ImmutableList<ProcessState> getProcessStats()
+    
+    /**
+	 * @return the elapsedTime
+	 */
+	public Long getElapsedTime() 
+	{
+		return elapsedTime;
+	}
+
+	public ImmutableList<ProcessState> getProcessStats()
     {
     	return stats;
     }
@@ -72,7 +83,7 @@ public class CommandResult
 	/**
 	 * @return the pid
 	 */
-	public long getPid() 
+	public Long getPid() 
 	{
 		return pid;
 	}

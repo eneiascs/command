@@ -21,6 +21,7 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.io.File;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -51,7 +52,7 @@ public class TestCommand
     @Test
     public void buildCommandChainNewObjects() throws Exception
     {
-        Command command = new Command("foo");
+        Command command = new Command(UUID.randomUUID().toString(), "foo");
         assertNotSame(command.setDirectory("foo"), command);
         assertNotSame(command.setDirectory(new File("foo")), command);
         assertNotSame(command.setSuccessfulExitCodes(42), command);
@@ -64,12 +65,14 @@ public class TestCommand
     public void buildCommand()
             throws Exception
     {
-        Command expected = new Command("a", "b", "c")
+    	String id = UUID.randomUUID().toString();
+    	
+        Command expected = new Command(id, "a", "b", "c")
                 .setDirectory("directory")
                 .setSuccessfulExitCodes(33, 44)
                 .setTimeLimit(5, TimeUnit.SECONDS);
 
-        Command actual = new Command("a", "b", "c")
+        Command actual = new Command(id, "a", "b", "c")
                 .setDirectory("directory")
                 .setSuccessfulExitCodes(33, 44)
                 .setTimeLimit(5, TimeUnit.SECONDS);
@@ -99,7 +102,9 @@ public class TestCommand
     public void testGetters()
             throws Exception
     {
-        Command command = new Command("a", "b", "c")
+    	String id = UUID.randomUUID().toString();
+    	
+        Command command = new Command(id, "a", "b", "c")
                 .setDirectory("directory")
                 .setSuccessfulExitCodes(33, 44)
                 .setTimeLimit(5, TimeUnit.SECONDS);
@@ -114,11 +119,13 @@ public class TestCommand
     public void execSimple()
             throws Exception
     {
-        CommandResult result = new Command("bash", "-c", "echo hello")
+    	String id = UUID.randomUUID().toString();
+    	
+        CommandResult result = new Command(id, "bash", "-c", "echo hello")
                 .setTimeLimit(1, TimeUnit.SECONDS)
                 .execute(executor);
 
-        assertEquals(result.getExitCode(), 0);
+        assertEquals(result.getExitCode(), Integer.valueOf(0));
         assertEquals(result.getCommandOutput(), "hello\n");
     }
 
@@ -126,7 +133,7 @@ public class TestCommand
     public void execTimeout()
             throws Exception
     {
-        new Command("bash", "-c", "echo foo && sleep 15")
+        new Command(UUID.randomUUID().toString(), "bash", "-c", "echo foo && sleep 15")
                 .setTimeLimit(1, TimeUnit.SECONDS)
                 .execute(executor);
     }
@@ -135,7 +142,7 @@ public class TestCommand
     public void execBadExitCode()
             throws Exception
     {
-        new Command("bash", "-c", "exit 33")
+        new Command(UUID.randomUUID().toString(), "bash", "-c", "exit 33")
                 .setTimeLimit(1, TimeUnit.SECONDS)
                 .execute(executor);
     }
@@ -144,7 +151,7 @@ public class TestCommand
     public void execNonZeroSuccess()
             throws Exception
     {
-        int actual = new Command("bash", "-c", "exit 33")
+        int actual = new Command(UUID.randomUUID().toString(), "bash", "-c", "exit 33")
                 .setSuccessfulExitCodes(33)
                 .setTimeLimit(1, TimeUnit.SECONDS)
                 .execute(executor).getExitCode();
@@ -155,7 +162,7 @@ public class TestCommand
     public void execZeroExitFail()
             throws Exception
     {
-        new Command("bash", "-c", "exit 0")
+        new Command(UUID.randomUUID().toString(), "bash", "-c", "exit 0")
                 .setSuccessfulExitCodes(33)
                 .setTimeLimit(1, TimeUnit.SECONDS)
                 .execute(executor);
@@ -165,7 +172,7 @@ public class TestCommand
     public void execBogusProcess()
             throws Exception
     {
-        new Command("ab898wer98e7r98e7r98e7r98ew")
+        new Command(UUID.randomUUID().toString(), "ab898wer98e7r98e7r98e7r98ew")
                 .setTimeLimit(1, TimeUnit.SECONDS)
                 .execute(executor);
     }
@@ -173,19 +180,21 @@ public class TestCommand
     @Test
     public void testEquivalence()
     {
+    	String id = UUID.randomUUID().toString();
+    	
         equivalenceTester()
                 .addEquivalentGroup(
-                        new Command("command"),
-                        new Command("command"))
+                        new Command(id, "command"),
+                        new Command(id, "command"))
                 .addEquivalentGroup(
-                        new Command("command").setDirectory("foo"),
-                        new Command("command").setDirectory(new File("foo")))
+                        new Command(id, "command").setDirectory("foo"),
+                        new Command(id, "command").setDirectory(new File("foo")))
                 .addEquivalentGroup(
-                        new Command("command").setTimeLimit(5, TimeUnit.SECONDS),
-                        new Command("command").setTimeLimit(new Duration(5, TimeUnit.SECONDS)))
+                        new Command(id, "command").setTimeLimit(5, TimeUnit.SECONDS),
+                        new Command(id, "command").setTimeLimit(new Duration(5, TimeUnit.SECONDS)))
                 .addEquivalentGroup(
-                        new Command("command").setSuccessfulExitCodes(5, 6),
-                        new Command("command").setSuccessfulExitCodes(ImmutableSet.of(6, 5)))
+                        new Command(id, "command").setSuccessfulExitCodes(5, 6),
+                        new Command(id, "command").setSuccessfulExitCodes(ImmutableSet.of(6, 5)))
                 .check();
     }
 }

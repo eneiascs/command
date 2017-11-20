@@ -63,10 +63,13 @@ class ProcessCallable implements Callable<CommandResult>
         // start the process
         Process process;
         
+        final long startTime;
+        
         final int pid;
         try 
         {
             process = processBuilder.start();
+            startTime = System.nanoTime();
             pid = (int) new Mirror().on(process).get().field("pid");
             System.out.printf("PID is: %s\n", pid);
         }
@@ -95,6 +98,8 @@ class ProcessCallable implements Callable<CommandResult>
             // wait for command to exit
             int exitCode = process.waitFor();
             
+            long elapsedTime = System.nanoTime() - startTime;
+            
             processProbe.cancel();
             
             String out = outputProcessor.getOutput();
@@ -102,10 +107,10 @@ class ProcessCallable implements Callable<CommandResult>
             // validate exit code
             if (!command.getSuccessfulExitCodes().contains(exitCode)) 
             {
-                throw new CommandFailedException(command, exitCode, out);
+                throw new CommandFailedException(command, exitCode, pid, out);
             }
             
-            return new CommandResult(command.getId(), pid, exitCode, out, listener.stats);
+            return new CommandResult(command.getId(), Long.valueOf(pid), exitCode, out, elapsedTime, listener.stats);
         }
         finally 
         {

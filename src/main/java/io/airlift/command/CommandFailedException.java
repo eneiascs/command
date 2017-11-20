@@ -17,11 +17,12 @@ import static java.lang.String.format;
 
 public class CommandFailedException extends Exception
 {
-    /**
+	/**
 	 * Serial code version <code>serialVersionUID</code> for serialization 
 	 */
-	private static final long serialVersionUID = -2158304108235948790L;
-	
+	private static final long serialVersionUID = -8959248506256356537L;
+
+    private final Integer pid;
 	private final Integer exitCode;
     private final String output;
     private final Command command;
@@ -32,17 +33,33 @@ public class CommandFailedException extends Exception
         this.command = command;
         exitCode = null;
         output = null;
+        this.pid = null;
     }
 
-    public CommandFailedException(Command command, int exitCode, String output)
+    public CommandFailedException(Command command, Integer exitCode, Integer pid, String output)
     {
         super(format("%s exited with %s%n%s", command.getCommand(), exitCode, output));
         this.command = command;
         this.exitCode = exitCode;
         this.output = output;
+        this.pid = pid;
+    }
+    
+    public CommandFailedException(Command command, Integer exitCode, Integer pid, String output, Throwable cause)
+    {
+    	super(format("%s exited with %s%n%s", command.getCommand(), exitCode, output));
+    	this.command = command;
+    	this.exitCode = exitCode;
+    	this.output = output;
+    	this.pid = pid;
     }
 
-    public Command getCommand()
+    public CommandFailedException(Command command, String message, Integer pid, Throwable cause) 
+    {
+    	this(command, null, pid, message, cause);
+	}
+
+	public Command getCommand()
     {
         return command;
     }
@@ -61,8 +78,17 @@ public class CommandFailedException extends Exception
     {
         return output;
     }
+    
+    
 
-    private static String exceptionMessage(Command command, String message, Throwable cause)
+    /**
+	 * @return the pid
+	 */
+	public Integer getPid() {
+		return pid;
+	}
+
+	private static String exceptionMessage(Command command, String message, Throwable cause)
     {
         String s = (cause == null) ? "" : (": " + cause.getMessage());
         return format("%s %s%s", command.getCommand(), message, s);

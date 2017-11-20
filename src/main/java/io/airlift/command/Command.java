@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -57,6 +58,25 @@ public class Command
     private final Map<String, String> environment;
     private final Duration timeLimit;
     private final List<Object> listeners;
+    
+    public static Command NULL_COMMAND = new Command(UUID.randomUUID().toString(), "") 
+    {
+    	@Override
+    	public CommandResult execute(Executor executor) throws CommandFailedException 
+    	{
+    		return new CommandResult(this.getId(), -1L, 0, "NULL_OUTPUT", 0L);
+    	}
+    };
+    
+    public static Command newBashCommand(String id, String command)
+    {
+    	return new Command(requireNonNull(id, () -> "id is null"), "bash", "-c", command);
+    }
+    
+    public static Command newBashCommand(String command)
+    {
+    	return newBashCommand(UUID.randomUUID().toString(), command);
+    }
 
     public Command(String id, String... command)
     {
