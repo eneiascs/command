@@ -58,6 +58,7 @@ class ProcessCallable implements Callable<CommandResult>
         ProcessBuilder processBuilder = new ProcessBuilder(command.getCommand());
         processBuilder.directory(command.getDirectory());
         processBuilder.redirectErrorStream(true);
+        processBuilder.environment().clear();
         processBuilder.environment().putAll(command.getEnvironment());
         
         // start the process

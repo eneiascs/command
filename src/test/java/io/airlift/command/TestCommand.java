@@ -21,7 +21,6 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.io.File;
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -31,20 +30,20 @@ import static java.util.concurrent.Executors.newCachedThreadPool;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotSame;
 
+import static java.util.UUID.randomUUID;
+
 public class TestCommand
 {
     private ExecutorService executor;
 
     @BeforeClass
-    public void setUp()
-            throws Exception
+    public void setUp() throws Exception
     {
         executor = newCachedThreadPool(daemonThreadsNamed("process-input-reader-%s"));
     }
 
     @AfterClass
-    public void tearDown()
-            throws Exception
+    public void tearDown() throws Exception
     {
         executor.shutdownNow();
     }
@@ -52,7 +51,7 @@ public class TestCommand
     @Test
     public void buildCommandChainNewObjects() throws Exception
     {
-        Command command = new Command(UUID.randomUUID().toString(), "foo");
+        Command command = new Command(randomUUID().toString(), "foo");
         assertNotSame(command.setDirectory("foo"), command);
         assertNotSame(command.setDirectory(new File("foo")), command);
         assertNotSame(command.setSuccessfulExitCodes(42), command);
@@ -62,10 +61,9 @@ public class TestCommand
     }
 
     @Test
-    public void buildCommand()
-            throws Exception
+    public void buildCommand() throws Exception
     {
-    	String id = UUID.randomUUID().toString();
+    	String id = randomUUID().toString();
     	
         Command expected = new Command(id, "a", "b", "c")
                 .setDirectory("directory")
@@ -99,10 +97,9 @@ public class TestCommand
     }
 
     @Test
-    public void testGetters()
-            throws Exception
+    public void testGetters() throws Exception
     {
-    	String id = UUID.randomUUID().toString();
+    	String id = randomUUID().toString();
     	
         Command command = new Command(id, "a", "b", "c")
                 .setDirectory("directory")
@@ -116,10 +113,9 @@ public class TestCommand
     }
 
     @Test
-    public void execSimple()
-            throws Exception
+    public void execSimple() throws Exception
     {
-    	String id = UUID.randomUUID().toString();
+    	String id = randomUUID().toString();
     	
         CommandResult result = new Command(id, "bash", "-c", "echo hello")
                 .setTimeLimit(1, TimeUnit.SECONDS)
@@ -129,29 +125,38 @@ public class TestCommand
         assertEquals(result.getCommandOutput(), "hello\n");
     }
 
-    @Test(expectedExceptions = CommandTimeoutException.class)
-    public void execTimeout()
-            throws Exception
+    @Test
+    public void execReadEnvironmentVariable() throws Exception
     {
-        new Command(UUID.randomUUID().toString(), "bash", "-c", "echo foo && sleep 15")
+        CommandResult result = new Command(randomUUID().toString(), "bash", "-c", "echo ${MESSAGE}")
+                .setTimeLimit(1, TimeUnit.SECONDS)
+                .addEnvironment("MESSAGE", "hello")
+                .execute(executor);
+
+        assertEquals(result.getExitCode(), Integer.valueOf(0));
+        assertEquals(result.getCommandOutput(), "hello\n");
+    }
+
+    @Test(expectedExceptions = CommandTimeoutException.class)
+    public void execTimeout() throws Exception
+    {
+        new Command(randomUUID().toString(), "bash", "-c", "echo foo && sleep 15")
                 .setTimeLimit(1, TimeUnit.SECONDS)
                 .execute(executor);
     }
 
     @Test(expectedExceptions = CommandFailedException.class)
-    public void execBadExitCode()
-            throws Exception
+    public void execBadExitCode() throws Exception
     {
-        new Command(UUID.randomUUID().toString(), "bash", "-c", "exit 33")
+        new Command(randomUUID().toString(), "bash", "-c", "exit 33")
                 .setTimeLimit(1, TimeUnit.SECONDS)
                 .execute(executor);
     }
 
     @Test
-    public void execNonZeroSuccess()
-            throws Exception
+    public void execNonZeroSuccess() throws Exception
     {
-        int actual = new Command(UUID.randomUUID().toString(), "bash", "-c", "exit 33")
+        int actual = new Command(randomUUID().toString(), "bash", "-c", "exit 33")
                 .setSuccessfulExitCodes(33)
                 .setTimeLimit(1, TimeUnit.SECONDS)
                 .execute(executor).getExitCode();
@@ -159,20 +164,18 @@ public class TestCommand
     }
 
     @Test(expectedExceptions = CommandFailedException.class)
-    public void execZeroExitFail()
-            throws Exception
+    public void execZeroExitFail() throws Exception
     {
-        new Command(UUID.randomUUID().toString(), "bash", "-c", "exit 0")
+        new Command(randomUUID().toString(), "bash", "-c", "exit 0")
                 .setSuccessfulExitCodes(33)
                 .setTimeLimit(1, TimeUnit.SECONDS)
                 .execute(executor);
     }
 
     @Test(expectedExceptions = CommandFailedException.class)
-    public void execBogusProcess()
-            throws Exception
+    public void execBogusProcess() throws Exception
     {
-        new Command(UUID.randomUUID().toString(), "ab898wer98e7r98e7r98e7r98ew")
+        new Command(randomUUID().toString(), "ab898wer98e7r98e7r98e7r98ew")
                 .setTimeLimit(1, TimeUnit.SECONDS)
                 .execute(executor);
     }
@@ -180,7 +183,7 @@ public class TestCommand
     @Test
     public void testEquivalence()
     {
-    	String id = UUID.randomUUID().toString();
+    	String id = randomUUID().toString();
     	
         equivalenceTester()
                 .addEquivalentGroup(
