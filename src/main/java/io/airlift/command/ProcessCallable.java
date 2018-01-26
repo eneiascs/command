@@ -13,6 +13,11 @@
  */
 package io.airlift.command;
 
+import static io.airlift.concurrent.Threads.daemonThreadsNamed;
+import static java.util.Objects.requireNonNull;
+import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
+import static java.util.concurrent.TimeUnit.SECONDS;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,11 +31,6 @@ import com.google.common.eventbus.Subscribe;
 import io.airlift.command.system.stats.process.ProcessProbe;
 import io.airlift.command.system.stats.process.ProcessProbeFactory;
 import net.vidageek.mirror.dsl.Mirror;
-
-import static io.airlift.concurrent.Threads.daemonThreadsNamed;
-import static java.util.Objects.requireNonNull;
-import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
-import static java.util.concurrent.TimeUnit.SECONDS;
 
 class ProcessCallable implements Callable<CommandResult>
 {
@@ -58,7 +58,12 @@ class ProcessCallable implements Callable<CommandResult>
         ProcessBuilder processBuilder = new ProcessBuilder(command.getCommand());
         processBuilder.directory(command.getDirectory());
         processBuilder.redirectErrorStream(true);
-        processBuilder.environment().clear();
+        
+        if (!command.isIncludeEnvironmentVariables())
+        {
+        	processBuilder.environment().clear();
+        }
+        
         processBuilder.environment().putAll(command.getEnvironment());
         
         // start the process

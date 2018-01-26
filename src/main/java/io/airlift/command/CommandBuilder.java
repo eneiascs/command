@@ -11,20 +11,23 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableSet;
 
 import io.airlift.units.Duration;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 public final class CommandBuilder 
 {
 	private String id;
 	private List<String> command = new ArrayList<>();
-    private Set<Integer> successfulExitCodes = new HashSet<>();
+    private Set<Integer> successfulExitCodes = new HashSet<>(ImmutableSet.of(0));
     private File directory;
     private Map<String, String> environment = new HashMap<>();
     private Duration timeLimit;
     private List<Object> listeners = new ArrayList<>();
+    private boolean includeSystemEnvVariables = true;
     
     private CommandBuilder(){}
     
@@ -82,8 +85,8 @@ public final class CommandBuilder
     	return this;
     }
     
-    public CommandBuilder setTimeout(double value, TimeUnit timeUnit)
-    {
+    public CommandBuilder setTimeout(Long value, TimeUnit timeUnit)
+    {    	  
 		return setTimeout(new Duration(value, timeUnit));
     }
     
@@ -101,7 +104,7 @@ public final class CommandBuilder
     
     public CommandBuilder addEnviromentVariable(String name, String value)
     {
-    	Preconditions.checkArgument(Strings.isNullOrEmpty(name), "Variable name is null");
+    	checkArgument(!Strings.isNullOrEmpty(name), "Environment variable's name is null");
     	
     	environment.put(name, value);
     	return this;
@@ -115,15 +118,35 @@ public final class CommandBuilder
     		{
     			this.listeners.add(listener);
     		}
-    		
     	}
     	
     	return this;
     }
     
+    public CommandBuilder includeEnvVariables()
+    {
+    	includeSystemEnvVariables = true;
+    	return this;
+    }
+    
+    public CommandBuilder removeEnvVariables()
+    {
+    	includeSystemEnvVariables = false;
+    	return this;
+    }
     
     public Command build()
     {
-		return new Command(this.id, command, successfulExitCodes, directory, environment, timeLimit, listeners);
+    	if (directory == null)
+    	{
+    		directory = new File(".").getAbsoluteFile();
+    	}
+    	
+    	if (timeLimit == null)
+    	{
+    		this.timeLimit = new Duration(365, TimeUnit.DAYS);
+    	}
+    	
+		return new Command(id, command, successfulExitCodes, directory, environment, timeLimit, listeners, includeSystemEnvVariables);
     }
 }

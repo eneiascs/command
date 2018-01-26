@@ -100,7 +100,7 @@ public final class SigarService
     	}
     	catch(Throwable t)
     	{
-    		LOG.info("Failed to load SIGAR"); 
+    		LOG.debug("Failed to load SIGAR"); 
             LOG.debug("The reason for SIGAR to have failed is", t);
             
     		if (sigar != null)

@@ -58,6 +58,7 @@ public class Command
     private final Map<String, String> environment;
     private final Duration timeLimit;
     private final List<Object> listeners;
+	private final boolean includeEnvVariables;
     
     public static Command NULL_COMMAND = new Command(UUID.randomUUID().toString(), "") 
     {
@@ -80,10 +81,10 @@ public class Command
 
     public Command(String id, String... command)
     {
-        this(id, ImmutableList.copyOf(command), DEFAULT_SUCCESSFUL_EXIT_CODES, DEFAULT_DIRECTORY, ImmutableMap.<String, String>of(), DEFAULT_TIME_LIMIT, Collections.emptyList());
+        this(id, ImmutableList.copyOf(command), DEFAULT_SUCCESSFUL_EXIT_CODES, DEFAULT_DIRECTORY, ImmutableMap.<String, String>of(), DEFAULT_TIME_LIMIT, Collections.emptyList(), true);
     }
 
-    public Command(String id, List<String> command, Set<Integer> successfulExitCodes, File directory, Map<String, String> environment, Duration timeLimit, List<Object> listeners)
+    public Command(String id, List<String> command, Set<Integer> successfulExitCodes, File directory, Map<String, String> environment, Duration timeLimit, List<Object> listeners, boolean includeEnvVariables)
     {
         requireNonNull(command, "command is null");
         checkArgument(!command.isEmpty(), "command is empty");
@@ -103,6 +104,7 @@ public class Command
         this.timeLimit = timeLimit;
         
         this.listeners = listeners != null ? ImmutableList.copyOf(listeners) : ImmutableList.of().asList();
+        this.includeEnvVariables = includeEnvVariables;
     }
     
     /**
@@ -128,12 +130,12 @@ public class Command
     {
         requireNonNull(args, "args is null");
         ImmutableList.Builder<String> command = ImmutableList.<String>builder().addAll(this.command).addAll(args);
-        return new Command(id, command.build(), successfulExitCodes, directory, environment, timeLimit, listeners);
+        return new Command(id, command.build(), successfulExitCodes, directory, environment, timeLimit, listeners, includeEnvVariables);
     }
     
     public Command registerListeners(List<Object> listeners)
     {
-    	return new Command(id, command, successfulExitCodes, directory, environment, timeLimit, listeners);
+    	return new Command(id, command, successfulExitCodes, directory, environment, timeLimit, listeners, includeEnvVariables);
     }
 
     public Map<String, String> getEnvironment()
@@ -146,14 +148,14 @@ public class Command
         requireNonNull(name, "name is null");
         requireNonNull(value, "value is null");
         ImmutableMap.Builder<String, String> builder = ImmutableMap.<String, String>builder().putAll(this.environment).put(name, value);
-        return new Command(id, command, successfulExitCodes, directory, builder.build(), timeLimit, listeners);
+        return new Command(id, command, successfulExitCodes, directory, builder.build(), timeLimit, listeners, includeEnvVariables);
     }
 
     public Command addEnvironment(Map<String, String> environment)
     {
         requireNonNull(environment, "environment is null");
         ImmutableMap.Builder<String, String> builder = ImmutableMap.<String, String>builder().putAll(this.environment).putAll(environment);
-        return new Command(id, command, successfulExitCodes, directory, builder.build(), timeLimit, listeners);
+        return new Command(id, command, successfulExitCodes, directory, builder.build(), timeLimit, listeners, includeEnvVariables);
     }
 
     public Set<Integer> getSuccessfulExitCodes()
@@ -171,7 +173,7 @@ public class Command
     {
         requireNonNull(successfulExitCodes, "successfulExitCodes is null");
         checkArgument(!successfulExitCodes.isEmpty(), "successfulExitCodes is empty");
-        return new Command(id, command, successfulExitCodes, directory, environment, timeLimit, listeners);
+        return new Command(id, command, successfulExitCodes, directory, environment, timeLimit, listeners, includeEnvVariables);
     }
 
     public File getDirectory()
@@ -188,7 +190,7 @@ public class Command
     public Command setDirectory(File directory)
     {
         requireNonNull(directory, "directory is null");
-        return new Command(id, command, successfulExitCodes, directory, environment, timeLimit, listeners);
+        return new Command(id, command, successfulExitCodes, directory, environment, timeLimit, listeners, includeEnvVariables);
     }
 
     public Duration getTimeLimit()
@@ -204,10 +206,25 @@ public class Command
     public Command setTimeLimit(Duration timeLimit)
     {
         requireNonNull(timeLimit, "timeLimit is null");
-        return new Command(id, command, successfulExitCodes, directory, environment, timeLimit, listeners);
+        return new Command(id, command, successfulExitCodes, directory, environment, timeLimit, listeners, includeEnvVariables);
     }
+    
+    public Command includeEnvironmentVariables()
+    {
+    	return new Command(id, command, successfulExitCodes, directory, environment, timeLimit, listeners, true);
+    }
+    
+    public Command excludeEnvironmentVariables()
+    {
+    	return new Command(id, command, successfulExitCodes, directory, environment, timeLimit, listeners, false);
+    }
+    
+	public boolean isIncludeEnvironmentVariables() 
+	{
+		return includeEnvVariables;
+	}
 
-    public CommandResult execute(Executor executor) throws CommandFailedException
+	public CommandResult execute(Executor executor) throws CommandFailedException
     {
         ProcessCallable processCallable = new ProcessCallable(this, executor, listeners);
         Future<CommandResult> future = submit(executor, processCallable);
@@ -270,6 +287,7 @@ public class Command
                 .add("successfulExitCodes", successfulExitCodes)
                 .add("directory", directory)
                 .add("timeLimit", timeLimit)
+                .add("includeEnvVariables", includeEnvVariables)
                 .toString();
     }
 
