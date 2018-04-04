@@ -13,23 +13,17 @@
  */
 package io.airlift.command;
 
-import static io.airlift.concurrent.Threads.daemonThreadsNamed;
 import static java.util.Objects.requireNonNull;
-import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
-import static java.util.concurrent.TimeUnit.SECONDS;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ScheduledExecutorService;
 
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 
-import io.airlift.command.system.stats.process.ProcessProbe;
-import io.airlift.command.system.stats.process.ProcessProbeFactory;
 import net.vidageek.mirror.dsl.Mirror;
 
 class ProcessCallable implements Callable<CommandResult>
@@ -77,18 +71,19 @@ class ProcessCallable implements Callable<CommandResult>
             process = processBuilder.start();
             startTime = System.nanoTime();
             pid = (int) new Mirror().on(process).get().field("pid");
-            System.out.printf("PID is: %s\n", pid);
+            System.out.printf("Running without probe. PID is: %s\n", pid);
+           
         }
         catch (IOException e) 
         {
             throw new CommandFailedException(command, "failed to start", e);
         }
-
+        
         OutputProcessor outputProcessor = null;
         
-        ProcessProbe processProbe = ProcessProbeFactory.getProcessProbe(command.getId(), pid, createProcessMonitorExecutor(pid));
+
         ProcessStatsListener listener = new ProcessStatsListener();
-        processProbe.registerListener(listener);
+
         
         try 
         {
@@ -96,17 +91,11 @@ class ProcessCallable implements Callable<CommandResult>
             outputProcessor = new OutputProcessor(process, executor);
             outputProcessor.start();
             
-            // start the processor probe
-            processProbe.start(Integer.parseInt(System.getProperty("command.process.probe.initialDelay", "1")), 
-            		Integer.parseInt(System.getProperty("command.process.probe.period", "1")), 
-            		Double.valueOf(command.getTimeLimit().convertTo(SECONDS).getValue()).longValue(), SECONDS);
 
             // wait for command to exit
             int exitCode = process.waitFor();
             
             long elapsedTime = System.nanoTime() - startTime;
-            
-            processProbe.cancel();
             
             String out = outputProcessor.getOutput();
             
@@ -131,17 +120,12 @@ class ProcessCallable implements Callable<CommandResult>
                     outputProcessor.destroy();
                 }
                 
-                processProbe.cancel();
+
             }
         }
     }
     
-    private ScheduledExecutorService createProcessMonitorExecutor(long pid) 
-    {
-    	String name = String.format("process-monitor-%s", pid);
-		return newSingleThreadScheduledExecutor(daemonThreadsNamed(name + "%s"));
-	}
-
+  
 	class ProcessStatsListener 
     {
     	private List<ProcessState> stats = new ArrayList<>();
@@ -149,8 +133,8 @@ class ProcessCallable implements Callable<CommandResult>
     	@Subscribe
     	public void addProcessState(ProcessState state)
     	{
-//    		stats.add(state);
     		eventbus.post(state);
     	}
     }
 }
+

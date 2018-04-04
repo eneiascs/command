@@ -10,7 +10,7 @@
 	</parent>
 
 	<artifactId>command</artifactId>
-	<version>0.5-SNAPSHOT</version>
+	<version>0.5.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>command</name>
@@ -156,3 +156,4 @@
 		</plugins>
 	</build>
 </project>
+
